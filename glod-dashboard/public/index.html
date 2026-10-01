@@ -4,32 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Glod Bot — El bot dorado para tu Discord</title>
-<link rel="stylesheet" href="/styles.css">
-<link rel="icon" href="/logo.png">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="logo.png">
 </head>
 <body class="landing">
   <div class="orb o1"></div><div class="orb o2"></div>
   <nav class="pillnav">
-    <a class="brand" href="/"><img src="/logo.png" onerror="this.onerror=null;this.src='/logo.svg'" width="26" height="26" alt="Glod"> Glod Bot</a>
-    <div class="links"><a href="/dashboard.html">Funciones</a><a href="/dashboard.html">Comandos</a><a href="/dashboard.html">Soporte</a></div>
+    <a class="brand" href="./"><img src="logo.png" onerror="this.onerror=null;this.src='logo.svg'" width="26" height="26" alt="Glod"> Glod Bot</a>
+    <div class="links"><a href="dashboard.html">Funciones</a><a href="dashboard.html">Comandos</a><a href="dashboard.html">Soporte</a></div>
     <div style="display:flex;gap:14px;align-items:center">
-      <a href="/login" style="color:#b9b8b4;font-size:14px">Login</a>
-      <a class="btn btn-light btn-sm" id="addTop" href="/dashboard.html">Add for free</a>
+      <a class="loginLink" href="dashboard.html" style="color:#b9b8b4;font-size:14px">Login</a>
+      <a class="btn btn-light btn-sm" id="addTop" href="dashboard.html">Add for free</a>
     </div>
   </nav>
 
   <div class="hero-logos">
-    <img src="/discord.png" onerror="this.onerror=null;this.src='/discord.svg'" width="76" height="76" alt="Discord" style="object-fit:contain">
+    <img src="discord.png" onerror="this.onerror=null;this.src='discord.svg'" width="76" height="76" alt="Discord" style="object-fit:contain">
     <span class="plus">+</span>
-    <img src="/logo.png" onerror="this.onerror=null;this.src='/logo.svg'" width="104" height="104" alt="Glod — G dorada con corona" style="border-radius:24px;box-shadow:0 0 70px rgba(212,175,55,.35)">
+    <img src="logo.png" onerror="this.onerror=null;this.src='logo.svg'" width="104" height="104" alt="Glod — G dorada con corona" style="border-radius:24px;box-shadow:0 0 70px rgba(212,175,55,.35)">
   </div>
 
   <section class="hero">
     <h1>The official <span class="gold">golden bot</span><br>of Discord</h1>
     <p class="sub">Bienvenidas configurables, anuncios con embeds, analíticas, niveles, economía, tickets y sorteos — todo desde un panel elegante.</p>
     <div class="hero-cta">
-      <a class="btn btn-light" id="addHero" href="/dashboard.html">Add for free</a>
-      <a class="btn btn-ghost" href="/login">Login →</a>
+      <a class="btn btn-light" id="addHero" href="dashboard.html">Add for free</a>
+      <a class="btn btn-ghost loginLink" href="dashboard.html">Login →</a>
     </div>
   </section>
 
@@ -47,11 +47,14 @@
     <div class="cmd"><b>Panel web</b> /dashboard.html → todo sin comandos</div>
   </section>
 
-  <footer class="land"><span>© 2026 Glod Bot</span><a href="/dashboard.html">Panel</a><span>Tema dorado elegante</span></footer>
+  <footer class="land"><span>© 2026 Glod Bot</span><a href="dashboard.html">Panel</a><span>Tema dorado elegante</span></footer>
 <script>
-fetch('/config').then(r=>r.json()).then(c=>{
+// Si hay backend (node server.js) usa invite + login reales; si es hosting
+// estático (GitHub Pages) los botones llevan al panel en modo demo.
+fetch('config').then(r=>r.json()).then(c=>{
   if(c.inviteUrl){document.getElementById('addTop').href=c.inviteUrl;document.getElementById('addHero').href=c.inviteUrl;}
-}).catch(()=>{});
+  document.querySelectorAll('.loginLink').forEach(a=>{a.href=c.oauth?'login':'dashboard.html';});
+}).catch(()=>{document.querySelectorAll('.loginLink').forEach(a=>{a.href='dashboard.html';});});
 </script>
 </body>
 </html>
