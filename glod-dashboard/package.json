@@ -1,0 +1,13 @@
+{
+  "name": "glod-dashboard",
+  "version": "1.0.0",
+  "description": "Panel web dorado para el bot Glod — bienvenidas, anuncios, analíticas y más. Sin dependencias.",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

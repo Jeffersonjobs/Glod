@@ -1,0 +1,14 @@
+{
+  "common.noPermission": "No tienes los permisos necesarios para usar este comando.",
+  "common.botNoPermission": "No tengo los permisos necesarios para hacer eso.",
+  "common.cooldown": "Espera {remaining}s antes de usar `{command}` de nuevo.",
+  "common.error": "Algo salió mal. El incidente ha sido registrado.",
+  "common.ownerOnly": "Solo los propietarios del bot pueden usar este comando.",
+  "moderation.ban.success": "Usuario baneado {user} — {reason}",
+  "moderation.kick.success": "Usuario expulsado {user} — {reason}",
+  "moderation.timeout.success": "Aislamiento aplicado a {user} por {duration} — {reason}",
+  "moderation.warn.added": "Advertencia para {user} ({total} en total) — {reason}",
+  "economy.daily.claimed": "¡Reclamaste tu recompensa diaria de {amount} monedas!",
+  "economy.daily.already": "Ya reclamaste hoy. Vuelve en {remaining}.",
+  "leveling.levelup": "¡{user} alcanzó el nivel {level}! 🎉"
+}

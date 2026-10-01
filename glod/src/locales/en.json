@@ -1,0 +1,14 @@
+{
+  "common.noPermission": "You lack the required permissions to use this command.",
+  "common.botNoPermission": "I lack the required permissions to do that.",
+  "common.cooldown": "Please wait {remaining}s before using `{command}` again.",
+  "common.error": "Something went wrong. The incident has been logged.",
+  "common.ownerOnly": "Only bot owners can use this command.",
+  "moderation.ban.success": "Banned {user} — {reason}",
+  "moderation.kick.success": "Kicked {user} — {reason}",
+  "moderation.timeout.success": "Timed out {user} for {duration} — {reason}",
+  "moderation.warn.added": "Warned {user} ({total} total) — {reason}",
+  "economy.daily.claimed": "You claimed your daily reward of {amount} coins!",
+  "economy.daily.already": "You already claimed today. Come back in {remaining}.",
+  "leveling.levelup": "{user} reached level {level}! 🎉"
+}

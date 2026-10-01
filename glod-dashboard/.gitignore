@@ -1,0 +1,5 @@
+# Glod Dashboard — nunca subir secretos ni dependencias
+node_modules/
+.env
+*.log
+.DS_Store
