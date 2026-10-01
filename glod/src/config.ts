@@ -24,7 +24,8 @@ export const config = {
   owners: (process.env.OWNER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
   api: {
     enabled: (process.env.API_ENABLED ?? 'true') === 'true',
-    port: Number(process.env.API_PORT ?? 3001),
+    // En Render el puerto lo inyecta la plataforma en $PORT; en local usa API_PORT o 3001.
+    port: Number(process.env.API_PORT ?? process.env.PORT ?? 3001),
     token: process.env.API_TOKEN ?? 'change-me',
   },
   lavalink: {

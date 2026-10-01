@@ -1,0 +1,54 @@
+# Render Blueprint: bot Glod + dashboard, plan gratuito.
+# Uso: Render → New → Blueprint → repo Glod → completa los valores manuales.
+# - API_TOKEN (bot) y BOT_API_TOKEN (panel) deben ser EL MISMO valor.
+# - APP_URL es la URL pública del dashboard (la da Render al desplegar).
+# - Tras desplegar, agrega en Discord Portal → OAuth2 → Redirects:
+#   https://TU-DASHBOARD.onrender.com/auth/callback
+
+services:
+  # ── Bot (API protegida con Bearer; /health público para el chequeo) ──
+  - type: web
+    name: glod-bot
+    runtime: node
+    plan: free
+    rootDir: glod
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        value: 1553852024397766666
+      - key: API_ENABLED
+        value: true
+      - key: API_TOKEN
+        sync: false
+      - key: DEFAULT_LOCALE
+        value: es
+
+  # ── Panel (público; habla con el bot vía BOT_API_URL) ──
+  - type: web
+    name: glod-dashboard
+    runtime: node
+    plan: free
+    rootDir: glod-dashboard
+    startCommand: node server.js
+    healthCheckPath: /config
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: BOT_API_URL
+        sync: false
+      - key: BOT_API_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        value: 1553852024397766666
+      - key: CLIENT_SECRET
+        sync: false
+      - key: APP_URL
+        sync: false
