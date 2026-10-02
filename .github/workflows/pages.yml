@@ -1,0 +1,38 @@
+# Publica la landing + panel en GitHub Pages.
+# El frontend queda apuntando al backend de Render (ver paso "backend").
+# El login y los datos en vivo los sirve el backend; Pages solo es estático.
+name: Deploy Glod a GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'glod-dashboard/public/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      # El frontend publicado habla con el backend de Render:
+      - run: echo '{"backend":"https://glod-dashboard.onrender.com"}' > glod-dashboard/public/backend.json
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: glod-dashboard/public
+      - id: deployment
+        uses: actions/deploy-pages@v4

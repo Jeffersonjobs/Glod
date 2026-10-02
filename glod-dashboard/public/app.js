@@ -1,7 +1,9 @@
 /* Glod Dashboard — lógica del panel. Habla con el bot vía /bot/* (proxy). Modo demo si el bot está offline. */
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-const state = { guilds: [], gid: localStorage.getItem('glod_gid') || '', detail: null, settings: null, stats: null, demo: false, color: '#d4af37', oauth: false, me: null };
+const state = { guilds: [], gid: localStorage.getItem('glod_gid') || '', detail: null, settings: null, stats: null, demo: false, color: '#d4af37', oauth: false, me: null, base: '' };
+// Prefijo del backend: '' = mismo origen (node server.js), o URL absoluta (GitHub Pages → Render).
+const B = (p) => (state.base ? state.base + '/' + p : p);
 let chActivity = null, chPie = null;
 
 const DEMO = {
@@ -19,7 +21,7 @@ function toast(msg, ok = true) {
   $('#toast').appendChild(d); setTimeout(() => d.remove(), 3800);
 }
 async function api(path, opts = {}) {
-  const r = await fetch('bot' + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  const r = await fetch(B('bot' + path), { headers: { 'Content-Type': 'application/json' }, credentials: 'include', ...opts });
   const t = await r.text();
   let j = null; try { j = JSON.parse(t); } catch { j = { raw: t }; }
   if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
@@ -46,11 +48,16 @@ async function init() {
     if (t.id === 'exitSimple') { e.preventDefault(); localStorage.removeItem('glod_simple'); location.reload(); }
   });
   $('#guildSelect').addEventListener('change', (e) => { state.gid = e.target.value; localStorage.setItem('glod_gid', state.gid); if (state.gid) loadGuild(state.gid); });
+  // ¿Dónde está el backend? backend.json lo dice (Pages lo trae con la URL de Render).
+  try {
+    const b = await (await fetch('backend.json')).json();
+    if (b && b.backend) state.base = String(b.backend).replace(/\/$/, '');
+  } catch { /* mismo origen */ }
   await loadConfig(); await loadGuilds();
 }
 async function loadConfig() {
   try {
-    const c = await (await fetch('config')).json();
+    const c = await (await fetch(B('config'), { credentials: 'include' })).json();
     state.oauth = !!c.oauth;
     const on = c.bot && c.bot.online;
     $('#botStatus').innerHTML = `<span class="statusdot ${on ? '' : 'off'}"></span>${on ? `En línea · ${c.bot.guilds} servidores` : 'Offline · modo demo'}`;
@@ -61,13 +68,13 @@ async function loadConfig() {
 function renderAuth(user) {
   const box = $('#authArea');
   if (user === 'local') { box.innerHTML = '<span class="muted">Modo local</span><a class="logout" id="exitSimple" href="#">Usar login</a>'; return; }
-  if (!user) { box.innerHTML = '<a class="btn btn-gold btn-sm" href="login">Entrar con Discord</a> <a href="#" id="simpleLink" class="muted" style="font-size:12px">Sin login</a>'; return; }
-  box.innerHTML = `${user.avatar ? `<img src="${esc(user.avatar)}" alt="">` : ''}<span>${esc(user.username)}</span><a class="logout" href="logout">Salir</a>`;
+  if (!user) { box.innerHTML = `<a class="btn btn-gold btn-sm" href="${B('login')}">Entrar con Discord</a> <a href="#" id="simpleLink" class="muted" style="font-size:12px">Sin login</a>`; return; }
+  box.innerHTML = `${user.avatar ? `<img src="${esc(user.avatar)}" alt="">` : ''}<span>${esc(user.username)}</span><a class="logout" href="${B('logout')}">Salir</a>`;
 }
 function showLoginBanner() {
   const b = $('#modeBanner');
   b.style.display = 'flex'; b.className = 'banner';
-  b.innerHTML = 'Inicia sesión con Discord para ver tus servidores. <a class="btn btn-gold btn-sm" href="login" style="margin-left:8px">Entrar con Discord</a>';
+  b.innerHTML = `Inicia sesión con Discord para ver tus servidores. <a class="btn btn-gold btn-sm" href="${B('login')}" style="margin-left:8px">Entrar con Discord</a>`;
 }
 function renderInvites(missing) {
   const box = $('#inviteBox');
@@ -87,7 +94,7 @@ async function loadGuilds() {
   // 1) Intenta sesión Discord: muestra SOLO los servidores del usuario
   if (!simple) {
     try {
-      const me = await (await fetch('me')).json();
+      const me = await (await fetch(B('me'), { credentials: 'include' })).json();
       if (me && me.loggedIn) {
       state.me = me; state.demo = false; banner(false);
       renderAuth(me.user);
@@ -120,7 +127,7 @@ async function loadGuilds() {
   renderAuth(simple && state.oauth ? 'local' : null);
   if (!simple && state.oauth) {
     // Login obligatorio: entra directo al login y de ahí a tu panel
-    location.href = 'login';
+    location.href = B('login');
     return;
   }
   // 2) Modo abierto (sin OAuth configurado): como antes + demo si el bot está off
@@ -168,7 +175,7 @@ async function loadGuild(gid) {
     ]);
     renderAll({ leaderboard, economyTop, warnings, tickets, giveaways, suggestions });
   } catch (e) {
-    if (String((e && e.message) || e).includes('login_required')) { location.href = 'login'; return; }
+    if (String((e && e.message) || e).includes('login_required')) { location.href = B('login'); return; }
     toast('Error cargando servidor: ' + e.message, false);
   }
   hideBoot();

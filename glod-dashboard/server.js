@@ -50,6 +50,22 @@ const OAUTH_ENABLED = Boolean(CLIENT_SECRET);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MANAGE_GUILD = 32n;
 
+// Orígenes públicos del frontend (misma app + GitHub Pages + extra opcional).
+// El navegador solo acepta la sesión si el backend responde CORS a estos orígenes.
+const FRONT_ORIGINS = new Set(
+  [APP_URL, 'https://jeffersonjobs.github.io', ...(process.env.FRONT_URL || '').split(',').map((s) => s.trim().replace(/\/$/, ''))].filter(Boolean),
+);
+function applyCors(req, res) {
+  const origin = req.headers.origin;
+  if (origin && FRONT_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  }
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -84,19 +100,21 @@ function getSession(req) {
 function touchCookie(res, name, value, maxAge) {
   const prev = res.getHeader('Set-Cookie');
   const cur = Array.isArray(prev) ? prev : (prev ? [prev] : []);
-  cur.push(`${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}`);
+  // None+Secure: la sesión viaja también cuando el frontend está en otro
+  // origen (GitHub Pages). localhost cuenta como contexto seguro.
+  cur.push(`${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; SameSite=None; Secure; Max-Age=${maxAge}`);
   res.setHeader('Set-Cookie', cur);
 }
 function clearCookie(res, name) {
   const prev = res.getHeader('Set-Cookie');
   const cur = Array.isArray(prev) ? prev : (prev ? [prev] : []);
-  cur.push(`${name}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+  cur.push(`${name}=; HttpOnly; Path=/; SameSite=None; Secure; Max-Age=0`);
   res.setHeader('Set-Cookie', cur);
 }
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of sessions) if (now > v.expires) sessions.delete(k);
-  for (const [k, v] of oauthStates) if (now > v) oauthStates.delete(k);
+  for (const [k, v] of oauthStates) if (now > v.exp) oauthStates.delete(k);
 }, 60000).unref();
 
 function send(res, code, body, type = 'text/plain; charset=utf-8') {
@@ -321,6 +339,12 @@ function setupPage() {
 
 const server = http.createServer(async (req, res) => {
   try {
+    applyCors(req, res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, { 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
     const url = new URL(req.url, 'http://x');
     const pathname = url.pathname;
 
@@ -340,7 +364,17 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/login' && req.method === 'GET') {
       if (!OAUTH_ENABLED) return send(res, 200, setupPage(), MIME['.html']);
       const state = crypto.randomBytes(16).toString('hex');
-      oauthStates.set(state, Date.now() + 10 * 60 * 1000);
+      // A dónde volver tras Discord: la página que inició el login, solo si es
+      // un origen conocido (mismo backend o frontend público). Si no, al panel.
+      let ret = '/dashboard.html';
+      try {
+        const ref = new URL(req.headers.referer || '');
+        if (FRONT_ORIGINS.has(ref.origin)) {
+          // Mismo backend: basta la ruta. Frontend externo: vuelve a su URL completa.
+          ret = ref.origin === APP_URL ? (ref.pathname.startsWith('/') ? ref.pathname : '/dashboard.html') : ref.href;
+        }
+      } catch { /* sin referer válido: panel local */ }
+      oauthStates.set(state, { exp: Date.now() + 10 * 60 * 1000, ret });
       touchCookie(res, 'glod_oauth_state', state, 600);
       return redirect(res, loginUrl(state));
     }
@@ -351,7 +385,8 @@ const server = http.createServer(async (req, res) => {
       const err = url.searchParams.get('error');
       const cookieState = parseCookies(req).glod_oauth_state;
       if (err) return send(res, 400, 'Login cancelado: ' + err);
-      if (!code || !state || state !== cookieState || !oauthStates.has(state)) {
+      const rec = state && state === cookieState ? oauthStates.get(state) : null;
+      if (!code || !rec || Date.now() > rec.exp) {
         return send(res, 400, 'Sesión OAuth inválida o expirada. <a href="/login">Reintentar</a>', MIME['.html']);
       }
       oauthStates.delete(state);
@@ -369,7 +404,7 @@ const server = http.createServer(async (req, res) => {
           expires: Date.now() + 7 * 24 * 3600 * 1000,
         });
         touchCookie(res, 'glod_sess', sid, 7 * 24 * 3600);
-        return redirect(res, '/dashboard.html');
+        return redirect(res, rec.ret);
       } catch (e) {
         return send(res, 500, 'No se pudo completar el login: ' + String((e && e.message) || e) + ' <a href="/login">Reintentar</a>', MIME['.html']);
       }

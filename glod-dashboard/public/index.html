@@ -49,12 +49,22 @@
 
   <footer class="land"><span>© 2026 Glod Bot</span><a href="dashboard.html">Panel</a><span>Tema dorado elegante</span></footer>
 <script>
-// Si hay backend (node server.js) usa invite + login reales; si es hosting
-// estático (GitHub Pages) los botones llevan al panel en modo demo.
-fetch('config').then(r=>r.json()).then(c=>{
-  if(c.inviteUrl){document.getElementById('addTop').href=c.inviteUrl;document.getElementById('addHero').href=c.inviteUrl;}
-  document.querySelectorAll('.loginLink').forEach(a=>{a.href=c.oauth?'login':'dashboard.html';});
-}).catch(()=>{document.querySelectorAll('.loginLink').forEach(a=>{a.href='dashboard.html';});});
+// Si hay backend (node server.js o Render) usa invite + login reales;
+// si es hosting estático sin backend, los botones llevan al panel en modo demo.
+(async () => {
+  let base = '';
+  try {
+    const b = await (await fetch('backend.json')).json();
+    if (b && b.backend) base = String(b.backend).replace(/\/$/, '') + '/';
+  } catch { /* mismo origen o sin backend */ }
+  try {
+    const c = await (await fetch(base + 'config')).json();
+    if (c.inviteUrl) { document.getElementById('addTop').href = c.inviteUrl; document.getElementById('addHero').href = c.inviteUrl; }
+    document.querySelectorAll('.loginLink').forEach((a) => { a.href = c.oauth ? base + 'login' : 'dashboard.html'; });
+  } catch {
+    document.querySelectorAll('.loginLink').forEach((a) => { a.href = 'dashboard.html'; });
+  }
+})();
 </script>
 </body>
 </html>
