@@ -138,7 +138,13 @@ async function exchangeCode(code) {
       redirect_uri: REDIRECT_URI,
     }).toString(),
   });
-  if (!r.ok) throw new Error('Token exchange falló (HTTP ' + r.status + ')');
+  if (!r.ok) {
+    if (r.status === 429) {
+      const wait = r.headers.get('retry-after') || 'unos minutos';
+      throw new Error(`Discord nos limitó por demasiados intentos (429). Espera ${wait} segundos sin reintentar y prueba una sola vez.`);
+    }
+    throw new Error('Token exchange falló (HTTP ' + r.status + ')');
+  }
   return r.json();
 }
 async function refreshTokens(refreshToken) {
