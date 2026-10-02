@@ -78,7 +78,29 @@ const MIME = {
 
 // ── Sesiones en memoria ──
 const sessions = new Map(); // sid -> { user, tokens, guildsCache, guildsAt, expires }
-const oauthStates = new Map(); // state -> expiresAt
+const oauthStates = new Map(); // state -> { exp, ret }
+
+// Freno anti-castigo: pocos intercambios con Discord por IP.
+// Si alguien ametralla Reintentar, se le frena AQUÍ sin tocar a Discord.
+const loginAttempts = new Map(); // ip -> { count, resetAt }
+const LOGIN_MAX = 5;
+const LOGIN_WINDOW = 10 * 60 * 1000;
+function clientIp(req) {
+  const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return fwd || (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+/** Segundos que debe esperar esta IP, o 0 si puede seguir. */
+function loginCooldown(ip) {
+  const now = Date.now();
+  let rec = loginAttempts.get(ip);
+  if (!rec || now > rec.resetAt) {
+    rec = { count: 0, resetAt: now + LOGIN_WINDOW };
+    loginAttempts.set(ip, rec);
+  }
+  if (rec.count >= LOGIN_MAX) return Math.max(1, Math.ceil((rec.resetAt - now) / 1000));
+  rec.count += 1;
+  return 0;
+}
 
 function parseCookies(req) {
   const out = {};
@@ -115,6 +137,7 @@ setInterval(() => {
   const now = Date.now();
   for (const [k, v] of sessions) if (now > v.expires) sessions.delete(k);
   for (const [k, v] of oauthStates) if (now > v.exp) oauthStates.delete(k);
+  for (const [k, v] of loginAttempts) if (now > v.resetAt) loginAttempts.delete(k);
 }, 60000).unref();
 
 function send(res, code, body, type = 'text/plain; charset=utf-8') {
@@ -391,6 +414,12 @@ const server = http.createServer(async (req, res) => {
       }
       oauthStates.delete(state);
       clearCookie(res, 'glod_oauth_state');
+      // Freno ANTES de llamar a Discord (esto es lo que evita el castigo de IP).
+      const waitIp = loginCooldown(clientIp(req));
+      if (waitIp > 0) {
+        const mm = Math.ceil(waitIp / 60);
+        return send(res, 429, `Demasiados intentos seguidos. Espera ${mm} minuto(s) sin reintentar y prueba una sola vez. <a href="/login">Volver</a>`, MIME['.html']);
+      }
       try {
         const t = await exchangeCode(code);
         const sid = crypto.randomBytes(32).toString('hex');
